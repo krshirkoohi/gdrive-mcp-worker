@@ -63,14 +63,17 @@ async function searchSingleAccount(
   try {
     const accessToken = await getAccessToken(config);
 
-    // Escape query single quotes
-    const safeQuery = query.replace(/'/g, "\\'");
-    const qParam = `name contains '${safeQuery}' or fullText contains '${safeQuery}' and trashed = false`;
+    const trimmed = query.trim();
+    const safeQuery = trimmed.replace(/'/g, "\\'");
+    const qParam = trimmed
+      ? `(name contains '${safeQuery}' or fullText contains '${safeQuery}') and trashed = false`
+      : `trashed = false`;
 
     const searchUrl = new URL('https://www.googleapis.com/drive/v3/files');
     searchUrl.searchParams.set('q', qParam);
     searchUrl.searchParams.set('pageSize', pageSize.toString());
     searchUrl.searchParams.set('fields', 'files(id, name, mimeType, modifiedTime, webViewLink, description)');
+    searchUrl.searchParams.set('orderBy', 'folder,modifiedTime desc');
 
     const response = await fetch(searchUrl.toString(), {
       headers: { Authorization: `Bearer ${accessToken}` },
@@ -125,7 +128,6 @@ export async function readFileContent(
   fileId: string,
   accountEmail?: string
 ): Promise<DriveFileContent> {
-  // Find the target account or try all accounts
   const targetAccounts = accountEmail
     ? accounts.filter((a) => a.email.toLowerCase() === accountEmail.toLowerCase())
     : accounts;
@@ -140,14 +142,13 @@ export async function readFileContent(
     try {
       const accessToken = await getAccessToken(acc);
 
-      // Fetch file metadata
       const metaUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?fields=id,name,mimeType`;
       const metaRes = await fetch(metaUrl, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
 
       if (!metaRes.ok) {
-        continue; // Try next account if file not found in this account
+        continue;
       }
 
       const meta = (await metaRes.json()) as { id: string; name: string; mimeType: string };
@@ -155,7 +156,6 @@ export async function readFileContent(
       let contentText = '';
 
       if (meta.mimeType === 'application/vnd.google-apps.document') {
-        // Export Google Doc as plain text
         const exportUrl = `https://www.googleapis.com/drive/v3/files/${fileId}/export?mimeType=text/plain`;
         const exportRes = await fetch(exportUrl, {
           headers: { Authorization: `Bearer ${accessToken}` },
@@ -164,7 +164,6 @@ export async function readFileContent(
           contentText = await exportRes.text();
         }
       } else if (meta.mimeType === 'application/vnd.google-apps.spreadsheet') {
-        // Export Google Sheet as CSV
         const exportUrl = `https://www.googleapis.com/drive/v3/files/${fileId}/export?mimeType=text/csv`;
         const exportRes = await fetch(exportUrl, {
           headers: { Authorization: `Bearer ${accessToken}` },
@@ -173,7 +172,6 @@ export async function readFileContent(
           contentText = await exportRes.text();
         }
       } else {
-        // Download raw file content (text, json, markdown, etc.)
         const downloadUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
         const downloadRes = await fetch(downloadUrl, {
           headers: { Authorization: `Bearer ${accessToken}` },
