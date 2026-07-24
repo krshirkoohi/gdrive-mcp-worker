@@ -1,0 +1,28 @@
+{
+  "name": "gdrive-mcp-worker",
+  "version": "1.0.0",
+  "description": "Multi-account Google Drive MCP Server for Cloudflare Workers, tailored for Notion AI and open-source MCP clients.",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "build": "npx -p typescript tsc --noEmit"
+  },
+  "keywords": [
+    "mcp",
+    "notion",
+    "google-drive",
+    "cloudflare-workers",
+    "model-context-protocol"
+  ],
+  "author": "Kavia",
+  "license": "MIT",
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241022.0",
+    "typescript": "^5.6.3",
+    "wrangler": "^3.80.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.1"
+  }
+}
