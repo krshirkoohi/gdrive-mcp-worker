@@ -1,8 +1,8 @@
 # Multi-Account Google Drive MCP Server (`gdrive-mcp-worker`)
 
-An open-source, serverless **Model Context Protocol (MCP)** server built for **Cloudflare Workers**. Connects multiple Google Drive accounts (e.g. Personal, Work, Projects) to AI platforms like **Notion AI**, Claude, or custom MCP clients.
+An open-source, serverless **Model Context Protocol (MCP)** server built for **Cloudflare Workers**. Connects multiple Google Drive accounts to AI platforms like **Notion AI**, Claude, or custom MCP clients.
 
-Each file search result is automatically annotated with its corresponding **Notion Area / Account name** (e.g. `Personal`, `Work`, `Lady K`, `Double Doppler`), giving AI agents full domain context when synthesizing knowledge across multiple drives.
+Each file search result is automatically annotated with its corresponding **Area / Account label** (e.g., `Personal`, `Work`, `Projects`), giving AI agents domain context when synthesizing knowledge across multiple drives.
 
 ---
 
@@ -10,7 +10,7 @@ Each file search result is automatically annotated with its corresponding **Noti
 
 - 🌐 **Cloudflare Workers Native**: Deploy 24/7 on Cloudflare's global edge network (Free tier includes 100,000 requests/day).
 - 🗂️ **Multi-Account Combined Search**: Search across multiple Google Drive accounts simultaneously in parallel.
-- 🏷️ **Area Metadata Tagging**: Maps search results directly to your designated Notion Areas or domain categories.
+- 🏷️ **Area Metadata Tagging**: Maps search results directly to your designated Areas or domain categories.
 - ⚡ **Dual MCP Transport**: Supports both **SSE (Server-Sent Events)** streaming (`/sse`) and HTTP JSON-RPC (`/mcp`).
 - 📄 **Doc & Sheet Export**: Exports Google Docs as plain text and Google Sheets as CSV for instant AI document ingestion.
 
@@ -40,10 +40,10 @@ For each Google account you wish to connect, generate a refresh token with scope
 
 ### 3. Set Worker Secrets via Wrangler
 
-You can pass configuration via `GOOGLE_ACCOUNTS_JSON` or environment variables:
+Pass configuration via the `GOOGLE_ACCOUNTS_JSON` environment variable:
 
 ```bash
-wrangler secret put GOOGLE_ACCOUNTS_JSON
+npx wrangler secret put GOOGLE_ACCOUNTS_JSON
 ```
 
 Format of `GOOGLE_ACCOUNTS_JSON`:
@@ -51,14 +51,14 @@ Format of `GOOGLE_ACCOUNTS_JSON`:
 [
   {
     "name": "Personal",
-    "email": "kavia.shirkoohi@gmail.com",
+    "email": "user.personal@example.com",
     "clientId": "YOUR_CLIENT_ID",
     "clientSecret": "YOUR_CLIENT_SECRET",
     "refreshToken": "YOUR_REFRESH_TOKEN"
   },
   {
     "name": "Work",
-    "email": "krshirkoohi@gmail.com",
+    "email": "user.work@example.com",
     "clientId": "YOUR_CLIENT_ID",
     "clientSecret": "YOUR_CLIENT_SECRET",
     "refreshToken": "YOUR_REFRESH_TOKEN"
