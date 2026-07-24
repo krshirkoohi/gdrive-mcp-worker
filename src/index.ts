@@ -27,7 +27,7 @@ export default {
     const corsHeaders = {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, mcp-session-id',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, mcp-session-id, x-mcp-session-id',
     };
 
     if (request.method === 'OPTIONS') {
@@ -36,8 +36,27 @@ export default {
 
     const accounts = parseAccounts(env);
 
-    // GET /status or GET / - Health & Info
-    if ((url.pathname === '/' || url.pathname === '/status') && request.method === 'GET') {
+    // Handle ANY POST request (Notion may POST to /sse, /mcp, or /)
+    if (request.method === 'POST') {
+      try {
+        const body = (await request.json()) as MCPRequest;
+        const response = await handleMCPCall(body, accounts);
+        return new Response(JSON.stringify(response), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      } catch (err: any) {
+        return new Response(
+          JSON.stringify({
+            jsonrpc: '2.0',
+            error: { code: -32700, message: 'Parse error: Invalid JSON' },
+          }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    // Handle GET /status or GET /info
+    if (url.pathname === '/status' || url.pathname === '/info') {
       return new Response(
         JSON.stringify(
           {
@@ -56,35 +75,21 @@ export default {
       );
     }
 
-    // POST /mcp or POST / - MCP JSON-RPC protocol endpoint
-    if (request.method === 'POST' && (url.pathname === '/mcp' || url.pathname === '/')) {
-      try {
-        const body = (await request.json()) as MCPRequest;
-        const response = await handleMCPCall(body, accounts);
-        return new Response(JSON.stringify(response), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      } catch (err: any) {
-        return new Response(
-          JSON.stringify({
-            jsonrpc: '2.0',
-            error: { code: -32700, message: 'Parse error: Invalid JSON' },
-          }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-    }
-
-    // GET /sse - Server-Sent Events endpoint for MCP stream transport
-    if (request.method === 'GET' && url.pathname === '/sse') {
+    // Handle GET (SSE streaming for /sse, /, or any endpoint)
+    if (request.method === 'GET') {
+      const sessionId = crypto.randomUUID();
       const stream = new ReadableStream({
         start(controller) {
           const encoder = new TextEncoder();
-          const postEndpoint = `${url.origin}/mcp`;
+          const postEndpoint = `${url.origin}/mcp?sessionId=${sessionId}`;
           controller.enqueue(encoder.encode(`event: endpoint\ndata: ${postEndpoint}\n\n`));
 
           const interval = setInterval(() => {
-            controller.enqueue(encoder.encode(`: ping\n\n`));
+            try {
+              controller.enqueue(encoder.encode(`: ping\n\n`));
+            } catch (e) {
+              clearInterval(interval);
+            }
           }, 15000);
 
           request.signal.addEventListener('abort', () => {

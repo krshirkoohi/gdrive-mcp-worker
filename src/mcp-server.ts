@@ -68,14 +68,14 @@ export async function handleMCPCall(
   const { id, method, params } = request;
 
   try {
-    // MCP Protocol Handler
     switch (method) {
-      case 'initialize':
+      case 'initialize': {
+        const clientVersion = params?.protocolVersion || '2024-11-05';
         return {
           jsonrpc: '2.0',
           id,
           result: {
-            protocolVersion: '2024-11-05',
+            protocolVersion: clientVersion,
             capabilities: {
               tools: {},
             },
@@ -85,6 +85,15 @@ export async function handleMCPCall(
             },
           },
         };
+      }
+
+      case 'notifications/initialized': {
+        return {
+          jsonrpc: '2.0',
+          id,
+          result: {},
+        };
+      }
 
       case 'tools/list':
         return {
