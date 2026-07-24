@@ -56,7 +56,12 @@ const TOOLS_MANIFEST = [
     description: 'Lists all connected Google Drive accounts and their associated Notion Area names.',
     inputSchema: {
       type: 'object',
-      properties: {},
+      properties: {
+        filter: {
+          type: 'string',
+          description: 'Optional keyword to filter accounts by name or email.',
+        },
+      },
     },
   },
 ];
@@ -106,7 +111,7 @@ export async function handleMCPCall(
 
       case 'tools/call': {
         const name = params?.name;
-        const args = params?.arguments || {};
+        const args = params?.arguments || params?.toolArguments || {};
 
         if (name === 'gdrive_search') {
           const query = args.query || '';
@@ -148,9 +153,19 @@ export async function handleMCPCall(
         }
 
         if (name === 'gdrive_list_accounts') {
-          const accList = accounts
-            .map((a) => `• **${a.name}**: ${a.email}`)
-            .join('\n');
+          const filterStr = (args.filter || '').toLowerCase();
+          const filteredAccounts = filterStr
+            ? accounts.filter(
+                (a) =>
+                  a.name.toLowerCase().includes(filterStr) ||
+                  a.email.toLowerCase().includes(filterStr)
+              )
+            : accounts;
+
+          const accList = filteredAccounts.length > 0
+            ? filteredAccounts.map((a) => `• **${a.name}**: ${a.email}`).join('\n')
+            : 'No connected accounts matched the filter.';
+
           return {
             jsonrpc: '2.0',
             id,
@@ -158,7 +173,7 @@ export async function handleMCPCall(
               content: [
                 {
                   type: 'text',
-                  text: `Connected Google Accounts (${accounts.length}):\n${accList}`,
+                  text: `Connected Google Accounts (${filteredAccounts.length}):\n${accList}`,
                 },
               ],
             },
