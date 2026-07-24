@@ -73,7 +73,7 @@ async function searchSingleAccount(
     searchUrl.searchParams.set('q', qParam);
     searchUrl.searchParams.set('pageSize', pageSize.toString());
     searchUrl.searchParams.set('fields', 'files(id, name, mimeType, modifiedTime, webViewLink, description)');
-    searchUrl.searchParams.set('orderBy', 'folder,modifiedTime desc');
+    searchUrl.searchParams.set('orderBy', 'modifiedTime desc');
 
     const response = await fetch(searchUrl.toString(), {
       headers: { Authorization: `Bearer ${accessToken}` },
@@ -114,10 +114,33 @@ export async function searchAllAccounts(
   const promises = accounts.map((acc) => searchSingleAccount(acc, query, pageSize));
   const resultsArray = await Promise.all(promises);
 
-  // Flatten and sort by modifiedTime descending
   const combined = resultsArray.flat();
   combined.sort((a, b) => new Date(b.modifiedTime).getTime() - new Date(a.modifiedTime).getTime());
   return combined;
+}
+
+/**
+ * Lists recently modified files across connected accounts, optionally filtered by account.
+ */
+export async function listRecentFiles(
+  accounts: GoogleAccountConfig[],
+  accountFilter?: string,
+  pageSize: number = 15
+): Promise<DriveFileResult[]> {
+  const targetAccounts = accountFilter
+    ? accounts.filter(
+        (a) =>
+          a.email.toLowerCase().includes(accountFilter.toLowerCase()) ||
+          a.name.toLowerCase().includes(accountFilter.toLowerCase())
+      )
+    : accounts;
+
+  const promises = targetAccounts.map((acc) => searchSingleAccount(acc, '', pageSize));
+  const resultsArray = await Promise.all(promises);
+
+  const combined = resultsArray.flat();
+  combined.sort((a, b) => new Date(b.modifiedTime).getTime() - new Date(a.modifiedTime).getTime());
+  return combined.slice(0, pageSize);
 }
 
 /**

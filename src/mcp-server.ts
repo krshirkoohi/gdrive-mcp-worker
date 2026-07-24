@@ -1,4 +1,4 @@
-import { searchAllAccounts, readFileContent, GoogleAccountConfig } from './google-drive';
+import { searchAllAccounts, listRecentFiles, readFileContent, GoogleAccountConfig } from './google-drive';
 
 export interface MCPRequest {
   jsonrpc: '2.0';
@@ -31,6 +31,23 @@ const TOOLS_MANIFEST = [
         },
       },
       required: ['query'],
+    },
+  },
+  {
+    name: 'gdrive_list_recent_files',
+    description: 'Lists recently modified files across connected Google Drive accounts. Can filter by account name or email (e.g. "Double Doppler", "Personal", "Work", "Lady K").',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        account: {
+          type: 'string',
+          description: 'Optional account name or email to filter by (e.g. "Double Doppler", "Personal", "Work", "Lady K").',
+        },
+        limit: {
+          type: 'number',
+          description: 'Maximum number of recent files to return (default 15).',
+        },
+      },
     },
   },
   {
@@ -126,6 +143,29 @@ export async function handleMCPCall(
                 )
                 .join('\n\n')
             : `No files found matching query '${query}' across ${accounts.length} connected Google accounts.`;
+
+          return {
+            jsonrpc: '2.0',
+            id,
+            result: {
+              content: [{ type: 'text', text: formattedText }],
+            },
+          };
+        }
+
+        if (name === 'gdrive_list_recent_files') {
+          const accountFilter = args.account;
+          const limit = args.limit || 15;
+          const files = await listRecentFiles(accounts, accountFilter, limit);
+
+          const formattedText = files.length > 0
+            ? files
+                .map(
+                  (f) =>
+                    `• **${f.name}** [Area: ${f.accountName} (${f.accountEmail})]\n  - ID: \`${f.id}\`\n  - Modified: ${f.modifiedTime}\n  - Type: ${f.mimeType}\n  - Link: ${f.webViewLink || 'N/A'}`
+                )
+                .join('\n\n')
+            : `No recent files found ${accountFilter ? `for account '${accountFilter}'` : ''}.`;
 
           return {
             jsonrpc: '2.0',
