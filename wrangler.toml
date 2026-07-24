@@ -2,7 +2,7 @@ name = "gdrive-mcp-worker"
 main = "src/index.ts"
 compatibility_date = "2024-10-22"
 compatibility_flags = ["nodejs_compat"]
+workers_dev = true
 
 [vars]
-# Configure account mappings as JSON array in secrets or environment vars:
-# GOOGLE_ACCOUNTS_JSON = '[{"name":"Personal", "email":"kavia.shirkoohi@gmail.com", "refreshToken":"..."}]'
+# GOOGLE_ACCOUNTS_JSON configured via wrangler secret put GOOGLE_ACCOUNTS_JSON
